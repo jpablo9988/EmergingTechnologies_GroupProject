@@ -8,8 +8,6 @@ const JWT_SECRET = 'some_secret_key';
 
 const userResolvers = {
     Query: {
-        users: async () => await UserModel.find(),
-        user: async (_, { id }) => await UserModel.findById(id),
         isLoggedIn: (_, __, { req }) => !!req.user,
         authUserId: (_, __, { req }) => {
             if (!!req.user) {

@@ -6,6 +6,7 @@ import SymptomModel from '../models/symptom.server.model.js';
 const PatientResolvers = {
   Query: {
     patients: async () => await PatientUser.find(),
+    patient: async (_, { id }) => await PatientUser.findById(id),
     isPatient: async (_, __, { req }) => {
       if (!!req.user) {
         const patient = await PatientUser.findById(req.user.id)

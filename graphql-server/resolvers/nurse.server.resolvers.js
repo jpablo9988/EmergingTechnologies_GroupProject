@@ -6,6 +6,7 @@ import NurseUser from '../models/nurse.server.model.js';
 const nurseResolvers = {
   Query: {
     nurses: async () => await NurseUser.find(),
+    nurse: async (_, { id }) => await NurseUser.findById(id),
     isNurse: async (_, __, { req }) => {
       if (!!req.user) {
         const nurse = await NurseUser.findById(req.user.id)
