@@ -13,12 +13,7 @@ const patientSchema = new Schema({
     symptoms: [{
         type: Schema.Types.ObjectId,
         ref: 'Symptom',
-    }],
-    emergencyAlerts:
-        [{
-            type: Schema.Types.ObjectId,
-            ref: 'EmergencyAlert',
-        }],
+    }]
 });
 var PatientUser = UserModel.discriminator('Patient',
     patientSchema);
