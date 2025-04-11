@@ -6,21 +6,21 @@ const typeDefs = `#graphql
     userName: String!
     email: String!
     password: String
-    type: String
+    kind: String
   }
   type Nurse implements User{
     id: ID!
     userName: String!
     email: String!
     password: String
-    type: String
+    kind: String
   }
   type Patient implements User {
     id: ID!
     userName: String!
     email: String!
     password: String
-    type: String
+    kind: String
     motivationalTips:[String!]
     vitalReports:[ID!]
     symptoms:[ID!]
@@ -66,12 +66,13 @@ const typeDefs = `#graphql
     updateNurse(id: ID!, email: String!, userName: String!, password: String!): Nurse
     createPatient(email: String!, userName: String!, password: String! ): Patient
     updatePatient(id: ID!, email: String!, userName: String!, password: String!, motivationalTips: [String!],vitalReports:[ID!],symptoms:[ID!]): Patient
-    addSymptom(name:String!,description:Description!):Symptom
-    editSymptom(name:String!,description:Description!):Symptom
+    addSymptom(name: String!,description: String!): Symptom
+    editSymptom(id:ID!, name: String!,description: String!): Symptom
     addVitalReport(patient: ID!,date: Date!,bodyTemp: Float!,heartRate: Float!,bloodPressure: Float!,respiratoryRate: Float!):VitalReport
     editVitalReport(id: ID!,patient: ID!,date: Date!,bodyTemp: Float!,heartRate: Float!,bloodPressure: Float!,respiratoryRate: Float!):VitalReport
     loginUser(email: String!, password: String!): User
     logOut: String!
+    assignSympton(patientId: ID!, symptomId: ID!) : Patient
   }
 `;
 

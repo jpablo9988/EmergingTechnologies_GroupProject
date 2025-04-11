@@ -1,6 +1,5 @@
 import SymptomModel from '../models/symptom.server.model.js';
-
-export const symptomResolvers = {
+const symptomResolvers = {
   Query: {
     symptoms: async () => await SymptomModel.find(),
     symptom: async (_, { id }) => await SymptomModel.findById(id),
@@ -21,3 +20,4 @@ export const symptomResolvers = {
     },
   },
 };
+export default symptomResolvers;

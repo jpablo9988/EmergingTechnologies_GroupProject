@@ -1,7 +1,7 @@
 import PatientUser from '../models/patient.server.model.js';
 import VitalReportModel from '../models/vitalReport.server.model.js';
 
-export const vitalReportResolvers = {
+const vitalReportResolvers = {
   Query: {
     vitalReports: async () => await VitalReportModel.find(),
     vitalReport: async (_, { id }) => await VitalReportModel.findById(id),
@@ -16,7 +16,8 @@ export const vitalReportResolvers = {
       if (!updatedPatient) throw new Error('Patient is not in Database');
       updatedPatient.vitalReports.push(newVitalReport.id);
       await newVitalReport.save();
-      return await updatedPatient.save();
+      await updatedPatient.save();
+      return newVitalReport;
     },
     //Only nurses can edit a vital report. 
     editVitalReport: async (_, { id, patient, date, bodyTemp, heartRate, bloodPressure, respiratoryRate }, { req }) => {
@@ -27,3 +28,4 @@ export const vitalReportResolvers = {
     },
   },
 };
+export default vitalReportResolvers;

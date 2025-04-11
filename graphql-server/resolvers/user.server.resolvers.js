@@ -3,7 +3,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import UserModel from '../models/user.server.model.js';
-
 const JWT_SECRET = 'some_secret_key';
 
 const userResolvers = {

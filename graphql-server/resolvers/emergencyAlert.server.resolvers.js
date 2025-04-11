@@ -1,6 +1,6 @@
 import EmergencyAlertModel from '../models/emergencyAlert.server.model.js';
 
-export const emergencyAlertResolvers = {
+const emergencyAlertResolvers = {
     Query: {
         emergencyAlerts: async () => await EmergencyAlertModel.find(),
         emergencyAlert: async (_, { id }) => await EmergencyAlertModel.findById(id),
@@ -13,3 +13,4 @@ export const emergencyAlertResolvers = {
         },
     },
 };
+export default emergencyAlertResolvers;
