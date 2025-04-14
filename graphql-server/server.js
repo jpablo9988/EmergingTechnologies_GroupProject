@@ -25,6 +25,7 @@ mongoose();
 
 const resolvers = {
   Date: dateScalar,
+  User: userResolvers.User,
   Query: {
     ...userResolvers.Query,
     ...nurseResolvers.Query,

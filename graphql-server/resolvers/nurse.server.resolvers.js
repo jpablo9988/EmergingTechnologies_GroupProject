@@ -1,8 +1,6 @@
 // nurse.resolvers.js
 import NurseUser from '../models/nurse.server.model.js';
 
-
-
 const nurseResolvers = {
   Query: {
     nurses: async () => await NurseUser.find(),
@@ -10,7 +8,8 @@ const nurseResolvers = {
     isNurse: async (_, __, { req }) => {
       if (!!req.user) {
         const nurse = await NurseUser.findById(req.user.id)
-        if (nurse !== undefined) {
+        if (nurse == null) return false;
+        if (nurse.kind == "Nurse") {
           return true;
         }
         return false;

@@ -10,7 +10,8 @@ const PatientResolvers = {
     isPatient: async (_, __, { req }) => {
       if (!!req.user) {
         const patient = await PatientUser.findById(req.user.id)
-        if (patient !== undefined) {
+        if (patient == null) return false;
+        if (patient.kind == "Patient") {
           return true;
         }
         return false;

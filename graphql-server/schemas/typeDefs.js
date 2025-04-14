@@ -25,6 +25,7 @@ const typeDefs = `#graphql
     vitalReports:[ID!]
     symptoms:[ID!]
   }
+  
   type EmergencyAlert {
     id: ID!
     patient: ID!
@@ -61,6 +62,7 @@ const typeDefs = `#graphql
     authUserId: ID
   }
   type Mutation {
+    createUser(email: String!, userName: String!, password: String!, type: String! ): User
     sendEmergencyAlert(patient: ID!, date: Date!): EmergencyAlert
     createNurse(email: String!, userName: String!, password: String! ): Nurse
     updateNurse(id: ID!, email: String!, userName: String!, password: String!): Nurse

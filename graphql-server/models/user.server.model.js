@@ -5,7 +5,7 @@ const { Schema } = mongoose;
 // Using discriminators to represent polymorphism:
 // For more info: https://thecodebarbarian.com/2015/07/24/guide-to-mongoose-discriminators
 
-var options = { discriminatorKey: 'type' };
+var options = { discriminatorKey: 'kind' };
 const userSchema = new Schema({
     // Uniques: 
     email: {
