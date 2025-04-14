@@ -14,6 +14,6 @@ const symptomSchema = new Schema({
         type: String
     }
 });
-const symptomModel = mongoose.model('Symptom', symptomSchema);
+const SymptomModel = mongoose.model('Symptom', symptomSchema);
 
-export default symptomModel;
+export default SymptomModel;

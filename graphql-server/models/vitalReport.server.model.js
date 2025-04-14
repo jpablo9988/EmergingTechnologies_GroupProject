@@ -33,6 +33,6 @@ const vitalReportSchema = new Schema({
 });
 //Using Compound Unique Key. (Individual uniques = false, indexed unique = true)
 vitalReportSchema.index({ patient: 1, date: 1 }, { unique: true })
-const vitalReportModel = mongoose.model('VitalReport', vitalReportSchema);
+const VitalReportModel = mongoose.model('VitalReport', vitalReportSchema);
 
-export default vitalReportModel;
+export default VitalReportModel;

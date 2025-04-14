@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
-import UserModel from './user.server.model';
+import UserModel from './user.server.model.js';
 const { Schema } = mongoose;
+var options = { discriminatorKey: 'type' };
 
 const patientSchema = new Schema({
     motivationalTips: [{
@@ -13,13 +14,9 @@ const patientSchema = new Schema({
     symptoms: [{
         type: Schema.Types.ObjectId,
         ref: 'Symptom',
-    }],
-    emergencyAlerts:
-        [{
-            type: Schema.Types.ObjectId,
-            ref: 'EmergencyAlert',
-        }],
-});
+    }]
+},
+    options);
 var PatientUser = UserModel.discriminator('Patient',
     patientSchema);
 

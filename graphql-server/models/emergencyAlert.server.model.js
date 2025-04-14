@@ -12,6 +12,6 @@ const emergencyAlertSchema = new Schema({
     },
 });
 
-const emergencyAlertModel = mongoose.model('EmergencyAlert', emergencyAlertSchema);
+const EmergencyAlertModel = mongoose.model('EmergencyAlert', emergencyAlertSchema);
 
-export default emergencyAlertModel;
+export default EmergencyAlertModel;

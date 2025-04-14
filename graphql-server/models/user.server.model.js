@@ -5,7 +5,7 @@ const { Schema } = mongoose;
 // Using discriminators to represent polymorphism:
 // For more info: https://thecodebarbarian.com/2015/07/24/guide-to-mongoose-discriminators
 
-var type = { discriminatorKey: 'type' };
+var options = { discriminatorKey: 'kind' };
 const userSchema = new Schema({
     // Uniques: 
     email: {
@@ -26,9 +26,9 @@ const userSchema = new Schema({
             (password) => password && password.length > 6,
             'Password should be longer than 6. '
         ]
-    },
-    type
-});
+    }
+},
+    options);
 
 userSchema.pre('save', async function () {
     const salt = await bcrypt.genSalt(12);
