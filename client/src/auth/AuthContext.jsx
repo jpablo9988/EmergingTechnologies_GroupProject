@@ -136,6 +136,7 @@ export const AuthContextProvider = ({ children }) => {
             return ("Error in Logging out")
         }
     }
+    //authUser es el ID de el que esta logged in, si lo necesitan usar.
     const context = { authUser, login, logout, isLoggedIn, isNurse }
 
     return (
