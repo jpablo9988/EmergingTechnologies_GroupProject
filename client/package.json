@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.13.7",
+    "@tensorflow/tfjs": "^4.22.0",
     "bootstrap": "^5.3.2",
     "react": "^18.2.0",
     "react-bootstrap": "^2.9.1",

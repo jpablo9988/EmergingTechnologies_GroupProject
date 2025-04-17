@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { gql, useQuery, useMutation } from '@apollo/client';
+import { predictConditionFromSymptoms } from "../utils/conditionPredictor";
+
+
+
 
 // ---------------- GraphQL ----------------
 const GET_PATIENTS = gql`
@@ -137,6 +141,7 @@ export default function NurseDashboard() {
   const [tip, setTip] = useState('');
   const [alertResponses, setAlertResponses] = useState({});
   const [showResolved, setShowResolved] = useState(false);
+  const [predictions, setPredictions] = useState({}); // 🧠 For condition prediction
 
   const handlePatientChange = (e) => {
     const patient = patientData?.patients.find(p => p.id === e.target.value);
@@ -204,6 +209,16 @@ export default function NurseDashboard() {
     } catch (err) {
       console.error(err);
       alert("Failed to update alert");
+    }
+  };
+
+  const handlePredictCondition = async (alertId, symptoms) => {
+    try {
+      const prediction = await predictConditionFromSymptoms(symptoms.map(s => s.name));
+      setPredictions(prev => ({ ...prev, [alertId]: prediction }));
+    } catch (err) {
+      console.error('Prediction error:', err);
+      alert('Failed to predict condition.');
     }
   };
 
@@ -321,7 +336,7 @@ export default function NurseDashboard() {
                   onChange={(e) => handleAlertResponseChange(alert.id, e.target.value)}
                 />
 
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 mt-2 flex-wrap">
                   <button
                     className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
                     onClick={() => handleUpdateAlert(alert.id, { response: alertResponses[alert.id] || '' })}
@@ -336,7 +351,32 @@ export default function NurseDashboard() {
                       Mark as Resolved
                     </button>
                   )}
+                  <button
+                    className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700"
+                    onClick={() => handlePredictCondition(alert.id, alert.symptoms)}
+                  >
+                    Predict Condition
+                  </button>
                 </div>
+
+                {predictions[alert.id]?.length > 0 && (
+  <div className="mt-2 text-sm text-purple-700">
+    <p className="font-semibold">Top Predicted Conditions:</p>
+    <ul className="list-disc list-inside">
+      {predictions[alert.id].map((p, i) => (
+        <li key={i}>
+          <strong>{p.condition}</strong>: {(p.score * 100).toFixed(1)}%
+        </li>
+      ))}
+    </ul>
+  </div>
+
+
+
+
+
+
+                )}
               </div>
             ))}
           </div>

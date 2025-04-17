@@ -1,3 +1,4 @@
+// graphql-server/typeDefs.js
 const typeDefs = `#graphql
   scalar Date
 
@@ -23,7 +24,7 @@ const typeDefs = `#graphql
     email: String!
     password: String
     kind: String
-    motivationalTips: [String!]            # ✅ Plain strings
+    motivationalTips: [String!]
     vitalReports: [ID!]
     symptoms: [ID!]
     rewardPoints: Int
@@ -47,12 +48,17 @@ const typeDefs = `#graphql
 
   type VitalReport {
     id: ID!
-    patient: Patient!                     # ✅ Was ID! — now full Patient
+    patient: Patient!
     date: Date!
     bodyTemp: Float!
     heartRate: Float!
     bloodPressure: Float!
     respiratoryRate: Float!
+  }
+
+  type PredictionResult {
+    condition: String!
+    score: Float!
   }
 
   type Query {
@@ -111,6 +117,7 @@ const typeDefs = `#graphql
     loginUser(email: String!, password: String!): User
     logOut: String!
     assignSymptom(patientId: ID!, symptomId: ID!): Patient
+    predictMedicalCondition(symptoms: [String!]!): PredictionResult!
   }
 `;
 
