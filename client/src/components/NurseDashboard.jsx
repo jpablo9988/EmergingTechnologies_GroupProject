@@ -360,22 +360,16 @@ export default function NurseDashboard() {
                 </div>
 
                 {predictions[alert.id]?.length > 0 && (
-  <div className="mt-2 text-sm text-purple-700">
-    <p className="font-semibold">Top Predicted Conditions:</p>
-    <ul className="list-disc list-inside">
-      {predictions[alert.id].map((p, i) => (
-        <li key={i}>
-          <strong>{p.condition}</strong>: {(p.score * 100).toFixed(1)}%
-        </li>
-      ))}
-    </ul>
-  </div>
-
-
-
-
-
-
+                  <div className="mt-2 text-sm text-purple-700">
+                    <p className="font-semibold">Top Predicted Conditions:</p>
+                    <ul className="list-disc list-inside">
+                      {predictions[alert.id].map((p, i) => (
+                        <li key={i}>
+                          <strong>{p.condition}</strong>: {(p.score * 100).toFixed(1)}%
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             ))}

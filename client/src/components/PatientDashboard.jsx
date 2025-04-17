@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { gql, useQuery, useMutation } from '@apollo/client';
+import { predictConditionFromSymptoms } from "../utils/conditionPredictor";
+
 
 // ---------------- GraphQL ----------------
 const GET_AUTH_PATIENT = gql`
@@ -128,6 +130,8 @@ const PatientDashboard = ({ patientId }) => {
   });
 
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
+  const [predictions, setPredictions] = useState({}); // 🧠 For condition prediction
+
 
   const handleChange = (e) => {
     setVitals({ ...vitals, [e.target.name]: e.target.value });
@@ -147,6 +151,24 @@ const PatientDashboard = ({ patientId }) => {
 
   const handleRemoveSymptom = (symptomId) => {
     setSelectedSymptoms((prev) => prev.filter((id) => id !== symptomId));
+  };
+
+
+  const handlePredictCondition = async (patientId, symptoms) => {
+    var listSymptoms = []
+    selectedSymptoms.map((id) => {
+      const sym = symptomData.symptoms.find(s => s.id === id)
+      if (sym != null) {
+        listSymptoms.push(sym)
+      }
+    });
+    try {
+      const prediction = await predictConditionFromSymptoms(listSymptoms.map(s => s.name));
+      setPredictions(prev => ({ ...prev, [patientId]: prediction }));
+    } catch (err) {
+      console.error('Prediction error:', err);
+      alert('Failed to predict condition.');
+    }
   };
 
   const handleSubmitVitals = async (e) => {
@@ -270,12 +292,30 @@ const PatientDashboard = ({ patientId }) => {
                 const sym = symptomData.symptoms.find(s => s.id === id);
                 return (
                   <span key={id} className="bg-blue-200 text-blue-800 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
-                    {sym?.name}
-                    <button onClick={() => handleRemoveSymptom(id)} className="text-red-500 ml-1">✕</button>
+
+                    <b className="text-sm font-small text-gray-500">{sym?.name}</b> <button onClick={() => handleRemoveSymptom(id)} className="text-red-500 ml-1">✕</button>
+                    <br />
+                    {sym?.description}
                   </span>
                 );
               })}
             </div>
+            <br /><br />
+            <button onClick={() => handlePredictCondition(patientData.id, selectedSymptoms)} className="text-gray-500 ml-1">
+              Get Prediction from Symptoms
+            </button>
+          </div>
+        )}
+        {patientData != null && predictions[patientData.id]?.length > 0 && (
+          <div className="mt-2 text-sm text-purple-700">
+            <p className="font-semibold">Top Predicted Conditions:</p>
+            <ul className="list-disc list-inside">
+              {predictions[patientData.id].map((p, i) => (
+                <li key={i}>
+                  <strong>{p.condition}</strong>: {(p.score * 100).toFixed(1)}%
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
