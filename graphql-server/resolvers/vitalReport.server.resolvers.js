@@ -3,11 +3,11 @@ import VitalReportModel from '../models/vitalReport.server.model.js';
 
 const vitalReportResolvers = {
   Query: {
-    vitalReports: async () => await VitalReportModel.find(),
-    vitalReport: async (_, { id }) => await VitalReportModel.findById(id),
+    vitalReports: async () => await VitalReportModel.find().populate('patient'),
+    vitalReport: async (_, { id }) => await VitalReportModel.findById(id).populate('patient'),
   },
+
   Mutation: {
-    // Both Patients and Nurses can add a vital report
     addVitalReport: async (
       _,
       { patient, date, bodyTemp, heartRate, bloodPressure, respiratoryRate },
@@ -15,7 +15,6 @@ const vitalReportResolvers = {
     ) => {
       if (!req.user) throw new Error('Not authenticated');
 
-      // Create new vital report
       const newVitalReport = new VitalReportModel({
         patient,
         date,
@@ -25,14 +24,11 @@ const vitalReportResolvers = {
         respiratoryRate,
       });
 
-      // Save the report first
       await newVitalReport.save();
 
-      // Fetch and update the patient
       const updatedPatient = await PatientUser.findById(patient);
       if (!updatedPatient) throw new Error('Patient is not in Database');
 
-      // Ensure vitalReports array is initialized
       if (!updatedPatient.vitalReports) {
         updatedPatient.vitalReports = [];
       }
@@ -40,24 +36,22 @@ const vitalReportResolvers = {
       updatedPatient.vitalReports.push(newVitalReport._id);
       await updatedPatient.save();
 
-      return newVitalReport;
+      return newVitalReport.populate('patient');
     },
 
-    // Only nurses can edit a vital report
     editVitalReport: async (
       _,
       { id, patient, date, bodyTemp, heartRate, bloodPressure, respiratoryRate },
       { req }
     ) => {
-      const vitalReport = await VitalReportModel.findById(id);
-      if (!vitalReport || !req.user) throw new Error('Unauthorized');
+      if (!req.user) throw new Error('Not authenticated');
       if (req.user.type !== 'nurse') throw new Error('User is not a Nurse');
 
       return await VitalReportModel.findByIdAndUpdate(
         id,
         { patient, date, bodyTemp, heartRate, bloodPressure, respiratoryRate },
         { new: true }
-      );
+      ).populate('patient');
     },
   },
 };

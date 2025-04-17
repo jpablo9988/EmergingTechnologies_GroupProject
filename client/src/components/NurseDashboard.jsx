@@ -1,8 +1,7 @@
-// NurseDashboard.jsx
 import React, { useState } from 'react';
 import { gql, useQuery, useMutation } from '@apollo/client';
 
-// ---------------- GraphQL Queries & Mutations ----------------
+// ---------------- GraphQL ----------------
 const GET_PATIENTS = gql`
   query GetPatients {
     patients {
@@ -21,12 +20,45 @@ const GET_VITAL_REPORTS = gql`
   query GetVitalReports {
     vitalReports {
       id
-      patient
+      patient {
+        id
+        userName
+      }
       date
       bodyTemp
       heartRate
       bloodPressure
       respiratoryRate
+    }
+  }
+`;
+
+const GET_SYMPTOMS = gql`
+  query GetSymptoms {
+    symptoms {
+      id
+      name
+      description
+    }
+  }
+`;
+
+const GET_EMERGENCY_ALERTS = gql`
+  query GetEmergencyAlerts {
+    emergencyAlerts {
+      id
+      date
+      resolved
+      response
+      patient {
+        id
+        userName
+      }
+      symptoms {
+        id
+        name
+        description
+      }
     }
   }
 `;
@@ -77,11 +109,25 @@ const UPDATE_PATIENT_TIPS = gql`
   }
 `;
 
+const UPDATE_EMERGENCY_ALERT = gql`
+  mutation UpdateEmergencyAlert($id: ID!, $resolved: Boolean, $response: String) {
+    updateEmergencyAlert(id: $id, resolved: $resolved, response: $response) {
+      id
+      resolved
+      response
+    }
+  }
+`;
+
 export default function NurseDashboard() {
-  const { data: patientData } = useQuery(GET_PATIENTS);
+  const { data: patientData, refetch: refetchPatients } = useQuery(GET_PATIENTS);
   const { data: vitalsData, refetch: refetchVitals } = useQuery(GET_VITAL_REPORTS);
+  const { data: symptomData } = useQuery(GET_SYMPTOMS);
+  const { data: alertsData, refetch: refetchAlerts } = useQuery(GET_EMERGENCY_ALERTS);
+
   const [addVitalReport] = useMutation(ADD_VITAL_REPORT);
   const [updatePatient] = useMutation(UPDATE_PATIENT_TIPS);
+  const [updateEmergencyAlert] = useMutation(UPDATE_EMERGENCY_ALERT);
 
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [selectedPatientObj, setSelectedPatientObj] = useState(null);
@@ -89,10 +135,12 @@ export default function NurseDashboard() {
     temperature: '', heartRate: '', bloodPressure: '', respiratoryRate: ''
   });
   const [tip, setTip] = useState('');
+  const [alertResponses, setAlertResponses] = useState({});
+  const [showResolved, setShowResolved] = useState(false);
 
   const handlePatientChange = (e) => {
     const patient = patientData?.patients.find(p => p.id === e.target.value);
-    setSelectedPatientId(patient?.id);
+    setSelectedPatientId(patient?.id || '');
     setSelectedPatientObj(patient || null);
   };
 
@@ -135,6 +183,7 @@ export default function NurseDashboard() {
           symptoms: selectedPatientObj.symptoms || []
         }
       });
+      await refetchPatients();
       alert("Tip sent");
       setTip('');
     } catch (err) {
@@ -143,17 +192,34 @@ export default function NurseDashboard() {
     }
   };
 
-  const filteredVitals = vitalsData?.vitalReports?.filter(v => v.patient === selectedPatientId) || [];
+  const handleAlertResponseChange = (alertId, text) => {
+    setAlertResponses(prev => ({ ...prev, [alertId]: text }));
+  };
+
+  const handleUpdateAlert = async (alertId, update) => {
+    try {
+      await updateEmergencyAlert({ variables: { id: alertId, ...update } });
+      await refetchAlerts();
+      alert("Alert updated");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update alert");
+    }
+  };
+
+  const filteredVitals = vitalsData?.vitalReports?.filter(
+    v => v.patient?.id === selectedPatientId
+  ) || [];
+
+  const filteredAlerts = alertsData?.emergencyAlerts?.filter(alert => showResolved || !alert.resolved) || [];
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <img src="/healthlogo.png" alt="Your Health Logo" className="w-12 h-12" />
         <h1 className="text-3xl font-bold text-blue-700">Your Health - Nurse Dashboard</h1>
       </div>
 
-      {/* Patient Selector */}
       <div className="mb-4">
         <label className="font-medium">Select Patient:</label>
         <select className="ml-2 border rounded px-2 py-1" value={selectedPatientId} onChange={handlePatientChange}>
@@ -164,7 +230,6 @@ export default function NurseDashboard() {
         </select>
       </div>
 
-      {/* Vitals Entry */}
       <div className="bg-white shadow p-6 rounded mb-6">
         <h2 className="text-xl font-semibold mb-2">Enter Vitals</h2>
         <form className="grid grid-cols-2 gap-4" onSubmit={submitVitals}>
@@ -183,10 +248,9 @@ export default function NurseDashboard() {
         </form>
       </div>
 
-      {/* Past Vitals */}
-      <div className="bg-white shadow p-6 rounded mb-6">
-        <h2 className="text-xl font-semibold mb-2">Past Vitals</h2>
-        {filteredVitals.length === 0 ? <p>No vitals available.</p> : (
+      {filteredVitals.length > 0 && (
+        <div className="bg-white shadow p-6 rounded mb-6">
+          <h2 className="text-xl font-semibold mb-2">Past Vitals for {selectedPatientObj?.userName}</h2>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
@@ -209,36 +273,76 @@ export default function NurseDashboard() {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
-
-      {/* Health Summary */}
-{selectedPatientId && (
-  <div className="bg-white shadow p-6 rounded mb-6">
-    <h2 className="text-xl font-semibold mb-2">Patient Health Summary</h2>
-    <ul className="list-disc list-inside text-sm text-gray-700">
-      <li>Total vitals submitted: {filteredVitals.length}</li>
-      {filteredVitals.length > 0 && (
-        <>
-          <li>Last submission: {new Date(filteredVitals[0].date).toLocaleDateString()}</li>
-          <li>Last Temp: {filteredVitals[0].bodyTemp}°C</li>
-          <li>Last HR: {filteredVitals[0].heartRate} bpm</li>
-          <li>Last BP: {filteredVitals[0].bloodPressure}</li>
-          <li>Last RR: {filteredVitals[0].respiratoryRate} rpm</li>
-        </>
+        </div>
       )}
-    </ul>
-  </div>
-)}
 
-
-      {/* Tip Sender */}
       <div className="bg-white shadow p-6 rounded">
         <h2 className="text-xl font-semibold mb-2">Send Motivational Tip</h2>
         <form onSubmit={submitTip} className="flex flex-col gap-3">
           <textarea value={tip} onChange={e => setTip(e.target.value)} className="border p-2 rounded" rows={3} required />
           <button type="submit" className="bg-green-600 text-white py-2 rounded hover:bg-green-700">Send Tip</button>
         </form>
+      </div>
+
+      <div className="bg-white shadow p-6 rounded mt-8">
+        <h2 className="text-xl font-semibold mb-4 text-red-600">Emergency Alerts</h2>
+        <button
+          onClick={() => setShowResolved(prev => !prev)}
+          className="mb-4 bg-gray-200 px-4 py-1 rounded text-sm"
+        >
+          {showResolved ? 'Hide Resolved Alerts' : 'Show Resolved Alerts'}
+        </button>
+
+        {filteredAlerts.length > 0 ? (
+          <div className="space-y-4">
+            {filteredAlerts.map(alert => (
+              <div key={alert.id} className="border rounded p-4 bg-gray-50">
+                <p><strong>Patient:</strong> {alert.patient?.userName || 'Unknown'}</p>
+                <p><strong>Date:</strong> {new Date(alert.date).toLocaleString()}</p>
+                <p><strong>Status:</strong> {alert.resolved ? "✅ Resolved" : "❗ Unresolved"}</p>
+
+                {alert.symptoms?.length > 0 && (
+                  <div className="mt-2 text-sm text-gray-700">
+                    <p className="font-semibold">Symptoms Reported in This Alert:</p>
+                    <ul className="list-disc list-inside">
+                      {alert.symptoms.map(symptom => (
+                        <li key={symptom.id}><strong>{symptom.name}</strong>: {symptom.description}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <label className="block mt-2 text-sm font-medium">Response:</label>
+                <textarea
+                  className="border rounded w-full p-2 mt-1 text-sm"
+                  rows={2}
+                  placeholder="Write your response..."
+                  value={alertResponses[alert.id] || alert.response || ''}
+                  onChange={(e) => handleAlertResponseChange(alert.id, e.target.value)}
+                />
+
+                <div className="flex gap-2 mt-2">
+                  <button
+                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                    onClick={() => handleUpdateAlert(alert.id, { response: alertResponses[alert.id] || '' })}
+                  >
+                    Save Response
+                  </button>
+                  {!alert.resolved && (
+                    <button
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                      onClick={() => handleUpdateAlert(alert.id, { resolved: true })}
+                    >
+                      Mark as Resolved
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-600">No {showResolved ? 'resolved' : 'unresolved'} emergency alerts.</p>
+        )}
       </div>
     </div>
   );

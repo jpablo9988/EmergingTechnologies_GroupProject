@@ -1,16 +1,18 @@
-// PatientDashboard.jsx
 import React, { useState } from 'react';
 import { gql, useQuery, useMutation } from '@apollo/client';
 
+// ---------------- GraphQL ----------------
 const GET_AUTH_PATIENT = gql`
   query GetAuthPatient($id: ID!) {
     patient(id: $id) {
       id
       userName
       email
+      password
       motivationalTips
       vitalReports
       symptoms
+      rewardPoints
     }
   }
 `;
@@ -21,6 +23,20 @@ const GET_SYMPTOMS = gql`
       id
       name
       description
+    }
+  }
+`;
+
+const GET_EMERGENCY_ALERTS = gql`
+  query GetEmergencyAlerts {
+    emergencyAlerts {
+      id
+      date
+      resolved
+      response
+      patient {
+        id
+      }
     }
   }
 `;
@@ -48,8 +64,8 @@ const ADD_VITAL_REPORT = gql`
 `;
 
 const SEND_EMERGENCY_ALERT = gql`
-  mutation SendEmergencyAlert($patient: ID!, $date: Date!) {
-    sendEmergencyAlert(patient: $patient, date: $date) {
+  mutation SendEmergencyAlert($patient: ID!, $date: Date!, $symptoms: [ID!]) {
+    sendEmergencyAlert(patient: $patient, date: $date, symptoms: $symptoms) {
       id
     }
   }
@@ -57,21 +73,52 @@ const SEND_EMERGENCY_ALERT = gql`
 
 const ASSIGN_SYMPTOM = gql`
   mutation AssignSymptom($patientId: ID!, $symptomId: ID!) {
-    assignSympton(patientId: $patientId, symptomId: $symptomId) {
+    assignSymptom(patientId: $patientId, symptomId: $symptomId) {
       id
     }
   }
 `;
 
+const UPDATE_PATIENT_REWARDS = gql`
+  mutation UpdatePatient(
+    $id: ID!
+    $email: String!
+    $userName: String!
+    $password: String
+    $motivationalTips: [String!]
+    $vitalReports: [ID!]
+    $symptoms: [ID!]
+    $rewardPoints: Int
+  ) {
+    updatePatient(
+      id: $id
+      email: $email
+      userName: $userName
+      password: $password
+      motivationalTips: $motivationalTips
+      vitalReports: $vitalReports
+      symptoms: $symptoms
+      rewardPoints: $rewardPoints
+    ) {
+      id
+    }
+  }
+`;
+
+// ---------------- Component ----------------
 const PatientDashboard = ({ patientId }) => {
   const { data: patientData, refetch } = useQuery(GET_AUTH_PATIENT, {
     variables: { id: patientId },
+    pollInterval: 5000,
   });
 
   const { data: symptomData } = useQuery(GET_SYMPTOMS);
+  const { data: alertData } = useQuery(GET_EMERGENCY_ALERTS);
+
   const [addVitalReport] = useMutation(ADD_VITAL_REPORT);
   const [sendEmergencyAlert] = useMutation(SEND_EMERGENCY_ALERT);
   const [assignSymptom] = useMutation(ASSIGN_SYMPTOM);
+  const [updatePatient] = useMutation(UPDATE_PATIENT_REWARDS);
 
   const [vitals, setVitals] = useState({
     temperature: '',
@@ -86,22 +133,20 @@ const PatientDashboard = ({ patientId }) => {
     setVitals({ ...vitals, [e.target.name]: e.target.value });
   };
 
-  const handleSymptomToggle = async (id) => {
-    const updated = selectedSymptoms.includes(id)
-      ? selectedSymptoms.filter((s) => s !== id)
-      : [...selectedSymptoms, id];
-
-    setSelectedSymptoms(updated);
+  const handleAddSymptom = async (symptomId) => {
+    if (selectedSymptoms.includes(symptomId)) return;
+    setSelectedSymptoms((prev) => [...prev, symptomId]);
 
     try {
-      if (!selectedSymptoms.includes(id)) {
-        await assignSymptom({ variables: { patientId, symptomId: id } });
-        alert('Symptom saved!');
-      }
+      await assignSymptom({ variables: { patientId, symptomId } });
     } catch (err) {
       console.error(err);
       alert('Failed to save symptom.');
     }
+  };
+
+  const handleRemoveSymptom = (symptomId) => {
+    setSelectedSymptoms((prev) => prev.filter((id) => id !== symptomId));
   };
 
   const handleSubmitVitals = async (e) => {
@@ -117,7 +162,21 @@ const PatientDashboard = ({ patientId }) => {
           respiratoryRate: parseFloat(vitals.respiratoryRate),
         },
       });
-      alert('Vitals submitted!');
+
+      await updatePatient({
+        variables: {
+          id: patientData.patient.id,
+          email: patientData.patient.email,
+          userName: patientData.patient.userName,
+          password: patientData.patient.password,
+          motivationalTips: patientData.patient.motivationalTips,
+          vitalReports: patientData.patient.vitalReports,
+          symptoms: patientData.patient.symptoms,
+          rewardPoints: (patientData.patient.rewardPoints || 0) + 5,
+        },
+      });
+
+      alert('Vitals submitted and +5 points awarded!');
       setVitals({ temperature: '', heartRate: '', bloodPressure: '', respiratoryRate: '' });
       await refetch();
     } catch (err) {
@@ -132,14 +191,35 @@ const PatientDashboard = ({ patientId }) => {
         variables: {
           patient: patientId,
           date: new Date().toISOString(),
+          symptoms: selectedSymptoms,
         },
       });
-      alert('Emergency alert sent!');
+
+      await updatePatient({
+        variables: {
+          id: patientData.patient.id,
+          email: patientData.patient.email,
+          userName: patientData.patient.userName,
+          password: patientData.patient.password,
+          motivationalTips: patientData.patient.motivationalTips,
+          vitalReports: patientData.patient.vitalReports,
+          symptoms: patientData.patient.symptoms,
+          rewardPoints: (patientData.patient.rewardPoints || 0) + 10,
+        },
+      });
+
+      alert('Emergency alert sent and +10 points awarded!');
     } catch (err) {
       console.error(err);
       alert('Failed to send emergency alert');
     }
   };
+
+  const myAlerts = alertData?.emergencyAlerts?.filter(
+    (alert) => alert.patient?.id === patientId
+  ) || [];
+
+  const latestAlert = myAlerts[0];
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -148,15 +228,10 @@ const PatientDashboard = ({ patientId }) => {
         <h1 className="text-3xl font-bold text-blue-700">Your Health - Patient Dashboard</h1>
       </div>
 
-      {/* Emergency */}
-      <div className="bg-white shadow p-6 rounded mb-6">
-        <h2 className="text-xl font-semibold mb-2">Emergency</h2>
-        <button
-          onClick={handleEmergency}
-          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-        >
-          Send Emergency Alert
-        </button>
+      {/* Reward Points */}
+      <div className="bg-blue-50 border border-blue-300 text-blue-800 px-4 py-3 rounded mb-6">
+        <p className="text-lg font-semibold">Reward Points: {patientData?.patient?.rewardPoints || 0}</p>
+        <p className="text-sm">+5 pts for vitals · +10 pts for alerts</p>
       </div>
 
       {/* Vitals Form */}
@@ -167,30 +242,62 @@ const PatientDashboard = ({ patientId }) => {
           <input name="heartRate" placeholder="Heart Rate (bpm)" value={vitals.heartRate} onChange={handleChange} className="border p-2 rounded" required />
           <input name="bloodPressure" placeholder="Blood Pressure (e.g., 120/80)" value={vitals.bloodPressure} onChange={handleChange} className="border p-2 rounded" required />
           <input name="respiratoryRate" placeholder="Respiratory Rate (rpm)" value={vitals.respiratoryRate} onChange={handleChange} className="border p-2 rounded" required />
-          <button type="submit" className="col-span-2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
-            Submit
-          </button>
+          <button type="submit" className="col-span-2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Submit Vitals</button>
         </form>
       </div>
 
-      {/* Symptoms Checklist */}
+      {/* Symptom Selector */}
       <div className="bg-white shadow p-6 rounded mb-6">
-        <h2 className="text-xl font-semibold mb-2">Symptom Checklist</h2>
-        <ul className="space-y-2">
-          {symptomData?.symptoms.map((symptom) => (
-            <li key={symptom.id}>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={selectedSymptoms.includes(symptom.id)}
-                  onChange={() => handleSymptomToggle(symptom.id)}
-                />
-                <span className="font-medium">{symptom.name}</span>
-                <span className="text-sm text-gray-600">({symptom.description})</span>
-              </label>
-            </li>
+        <h2 className="text-xl font-semibold mb-2">Select Symptoms</h2>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          {symptomData?.symptoms.map(symptom => (
+            <button
+              key={symptom.id}
+              className="border px-2 py-1 text-sm rounded hover:bg-blue-100 transition"
+              onClick={() => handleAddSymptom(symptom.id)}
+              type="button"
+            >
+              {symptom.name}
+            </button>
           ))}
-        </ul>
+        </div>
+
+        {selectedSymptoms.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-gray-700">Selected Symptoms:</h3>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {selectedSymptoms.map((id) => {
+                const sym = symptomData.symptoms.find(s => s.id === id);
+                return (
+                  <span key={id} className="bg-blue-200 text-blue-800 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
+                    {sym?.name}
+                    <button onClick={() => handleRemoveSymptom(id)} className="text-red-500 ml-1">✕</button>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={handleEmergency}
+          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+        >
+          Send Emergency Alert
+        </button>
+
+        {latestAlert && (
+          <div className="mt-4 text-sm text-gray-700">
+            <p><strong>Last Alert:</strong> {new Date(latestAlert.date).toLocaleString()}</p>
+            <p><strong>Status:</strong> {latestAlert.resolved ? '✅ Resolved' : '❗ Pending'}</p>
+            {latestAlert.response && (
+              <div className="mt-2 bg-gray-100 border rounded p-2">
+                <p className="font-medium text-green-700">Nurse Response:</p>
+                <p>{latestAlert.response}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Motivational Tips */}

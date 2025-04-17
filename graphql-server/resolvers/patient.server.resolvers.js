@@ -1,47 +1,78 @@
-// patient.resolvers.js
 import PatientUser from '../models/patient.server.model.js';
 import SymptomModel from '../models/symptom.server.model.js';
-//This only has specific funcions to Patient. Remember that this is a child of user.
-//Patients can use all functions definded in user resolver.
+
 const PatientResolvers = {
   Query: {
     patients: async () => await PatientUser.find(),
     patient: async (_, { id }) => await PatientUser.findById(id),
     isPatient: async (_, __, { req }) => {
       if (!!req.user) {
-        const patient = await PatientUser.findById(req.user.id)
+        const patient = await PatientUser.findById(req.user.id);
         if (patient == null) return false;
-        if (patient.kind == "Patient") {
-          return true;
-        }
-        return false;
+        return patient.kind === "Patient";
       }
       return false;
     },
   },
+
   Mutation: {
     createPatient: async (_, { email, userName, password }) => {
-      //Creates a User of Type patient through discriminators. 
-      //Create with Empty Lists. 
       const newPatient = new PatientUser({
-        email, userName, password,
-        motivationalTips: [], vitalReports: [], symptoms: []
+        email,
+        userName,
+        password,
+        motivationalTips: [],
+        vitalReports: [],
+        symptoms: [],
+        rewardPoints: 0
       });
       return await newPatient.save();
     },
-    updatePatient: async (_, { id, email, userName, password, motivationalTips, vitalReports, symptoms }) =>
-      await PatientUser.findByIdAndUpdate(id, { email, userName, password, motivationalTips, vitalReports, symptoms }, {
-        overwriteDiscriminatorKey: true, new: true
-      }),
-    assignSympton: async (_, { patientId, symptomId }) => {
-      const foundSymptom = SymptomModel.findById(symptomId);
+
+    updatePatient: async (_, {
+      id,
+      email,
+      userName,
+      password,
+      motivationalTips,
+      vitalReports,
+      symptoms,
+      rewardPoints
+    }) => {
+      const updateFields = {
+        email,
+        userName,
+        motivationalTips,
+        vitalReports,
+        symptoms,
+      };
+
+      if (password !== undefined) updateFields.password = password;
+      if (rewardPoints !== undefined) updateFields.rewardPoints = rewardPoints;
+
+      return await PatientUser.findByIdAndUpdate(
+        id,
+        updateFields,
+        { overwriteDiscriminatorKey: true, new: true }
+      );
+    },
+
+    assignSymptom: async (_, { patientId, symptomId }, { req }) => {
       if (!req.user) throw new Error('Unauthorized');
-      if (!foundSymptom) throw new Error('Symptom not in Database');
-      const foundPatient = PatientUser.findById(patientId);
-      if (!foundPatient) throw new Error('Patient not in Database');
-      foundPatient.symptoms.push(symptomId);
-      return await foundPatient.save();
-    }
+
+      const foundSymptom = await SymptomModel.findById(symptomId);
+      if (!foundSymptom) throw new Error('Symptom not found in database');
+
+      const foundPatient = await PatientUser.findById(patientId);
+      if (!foundPatient) throw new Error('Patient not found in database');
+
+      if (!foundPatient.symptoms.includes(symptomId)) {
+        foundPatient.symptoms.push(symptomId);
+        await foundPatient.save();
+      }
+
+      return foundPatient;
+    },
   },
 };
 
